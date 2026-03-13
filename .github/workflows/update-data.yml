@@ -1,7 +1,7 @@
 name: Opdater elpriser
 
 on:
-  workflow_dispatch:  # workflow kan trigges eksternt eller manuelt
+  workflow_dispatch: 
 
 jobs:
   update:
@@ -11,13 +11,16 @@ jobs:
       - name: Hent repo
         uses: actions/checkout@v4
 
-      - name: Installer Node
-        uses: actions/setup-node@v4
+      - name: Installer Python
+        uses: actions/setup-python@v5
         with:
-          node-version: 18
+          python-version: '3.10'
+
+      - name: Installer dependencies
+        run: pip install requests
 
       - name: Kør script
-        run: node script.js
+        run: python script.py
 
       - name: Commit & push CSV filer
         run: |
@@ -25,4 +28,5 @@ jobs:
           git config user.email "github-actions@github.com"
           git add data.csv extrema.csv
           git commit -m "Auto update data $(date -u)" || echo "No changes to commit"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/laehtv2/elpriser-chart.git HEAD:main
+          # Bruger GITHUB_TOKEN automatisk for det nuværende repo
+          git push

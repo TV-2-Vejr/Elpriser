@@ -32,15 +32,18 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           
-          git pull origin main --rebase
-          
           git add data.csv extrema.csv
           
-          if git diff --quiet && git diff --staged --quiet; then
+          if git diff --staged --quiet; then
             echo "Ingen ændringer at committe"
-          else
-            git commit -m "Auto update data $(date -u)"
-            git push origin HEAD:main
+            exit 0
           fi
+
+          git commit -m "Auto update data $(date -u)"
+          
+          # --rebase sørger for en pæn historik
+          git pull origin main --rebase
+          
+          git push origin HEAD:main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

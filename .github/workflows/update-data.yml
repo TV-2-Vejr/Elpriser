@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Hent repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
 
       - name: Installer Python
         uses: actions/setup-python@v5
@@ -29,7 +31,16 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+          
+          git pull origin main --rebase
+          
           git add data.csv extrema.csv
-          git commit -m "Auto update data $(date -u)" || echo "No changes to commit"
-          # Bruger GITHUB_TOKEN automatisk for det nuværende repo
-          git push
+          
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "Ingen ændringer at committe"
+          else
+            git commit -m "Auto update data $(date -u)"
+            git push origin HEAD:main
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

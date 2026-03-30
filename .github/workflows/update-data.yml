@@ -23,7 +23,10 @@ jobs:
 
       - name: Installer dependencies
         run: pip install requests
-
+        
+      - name: Installer tidszonedata
+        run: sudo apt-get install -y tzdata
+        
       - name: Kør script
         run: python script.py
 

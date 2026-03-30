@@ -3,6 +3,10 @@ import re
 import csv
 import json
 from datetime import datetime, timedelta
+try:
+    from zoneinfo import ZoneInfo # Python 3.9+
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 
 def get_latest_euro_rate():
     rss_url = "https://www.nationalbanken.dk/api/currencyrates?format=rss&lang=da&isoCodes=EUR"
@@ -16,20 +20,24 @@ def get_latest_euro_rate():
     return 7.4604
 
 def get_local_iso_now():
-    # Simulerer JS getLocalISOString logic
-    now = datetime.now()
-    now = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    # Hent nuværende tidspunkt i dansk tidszone (håndterer automatisk sommer/vintertid)
+    tz = ZoneInfo("Europe/Copenhagen")
+    now = datetime.now(tz)
+    # Rund ned til nærmeste hele time
+    now = now.replace(minute=0, second=0, microsecond=0)
     return now
 
 def run():
     eur_rate = get_latest_euro_rate()
+    # Nu returnerer denne den korrekte danske tid uanset årstid
     start_dt = get_local_iso_now()
     end_dt = start_dt + timedelta(hours=36)
     
+    # Vi bruger isoformat() eller strftime, men fjerner tidszone-offsettet fra strengen til API'et
     start_str = start_dt.strftime("%Y-%m-%dT%H:%M")
     end_str = end_dt.strftime("%Y-%m-%dT%H:%M")
     
-    print(f"ℹ Henter data fra: {start_str} til {end_str}")
+    print(f"ℹ Henter data fra (Dansk tid): {start_str} til {end_str}")
 
     url = (f"https://api.energidataservice.dk/dataset/DayAheadPrices"
            f"?start={start_str}&end={end_str}"
@@ -47,6 +55,7 @@ def run():
     oe_raw = []
 
     for r in records:
+        # API'et returnerer TimeDK, som vi kan sammenligne direkte med vores start_str
         if r['TimeDK'] < start_str:
             continue
 

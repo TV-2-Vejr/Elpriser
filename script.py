@@ -101,7 +101,7 @@ def run():
         for h in sorted(times.keys()):
             avg_jf = sum(times[h]["jf"])/len(times[h]["jf"]) if times[h]["jf"] else ""
             avg_oe = sum(times[h]["oe"])/len(times[h]["oe"]) if times[h]["oe"] else ""
-            writer.writerow([h.replace("T", " "), f"{avg_jf:.3f}", f"{avg_oe:.3f}"])
+            writer.writerow([h.replace("T", " "), f"{avg_jf:.2f}", f"{avg_oe:.2f}"])
 
     # Skriv extrema.csv
     with open('extrema.csv', 'w', newline='', encoding='utf-8') as f:

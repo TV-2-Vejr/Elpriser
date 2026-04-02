@@ -1,7 +1,7 @@
 import requests
 import csv
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 
 def run():
     try:
@@ -28,8 +28,8 @@ def run():
         groen_procent = min(100, round(((vind + sol) / forbrug) * 100)) if forbrug > 0 else 0
 
         # 2. Hent CO2 prognose (CO2EmisProg)
-        # Vi henter rigeligt med data for at sikre, at vi har de næste mange timer
-        url_prog = "https://api.energidataservice.dk/dataset/CO2EmisProg?limit=200&filter=%7B%22PriceArea%22%3A%5B%22DK1%22%5D%7D"
+        # Vi henter op til 500 records for at være sikre på at dække hele døgnet
+        url_prog = "https://api.energidataservice.dk/dataset/CO2EmisProg?limit=500&filter=%7B%22PriceArea%22%3A%5B%22DK1%22%5D%7D"
         res_prog = requests.get(url_prog).json()
         prog_records = res_prog.get('records', [])
 
@@ -46,31 +46,29 @@ def run():
             writer.writerow(["Grøn", f"{groen_procent} %"])
             writer.writerow(["Tid", tid_nu_str])
             
-            # Sektion 2: Prognose per time (nærmeste fremtidige time)
+            # Sektion 2: Prognose per time (fra næste hele time til kl. 23)
             writer.writerow(["time", "forecast CO2"])
             
-            # Sorter ALLE records kronologisk først
-            # Vi bruger 'Minutes5DK' eller 'Minutes1DK' som sorteringsnøgle
+            # Sorter kronologisk
             sorted_all = sorted(prog_records, key=lambda x: (x.get('Minutes5DK') or x.get('Minutes1DK', '')))
             
-            count = 0
             for p in sorted_all:
                 tid_raw = p.get('Minutes5DK') or p.get('Minutes1DK')
                 
-                # Tjek om dette forecast-tidspunkt er EFTER det aktuelle tidspunkt
+                # Tjek om tidspunktet er efter 'nu'
                 if tid_raw and tid_raw > tid_nu_str:
-                    minutter = tid_raw[14:16]
+                    timer_str = tid_raw[11:13] # HH
+                    minutter_str = tid_raw[14:16] # MM
                     
                     # Tag kun hele timer (:00)
-                    if minutter == "00":
+                    if minutter_str == "00":
                         tid_kort = tid_raw[11:16]
                         writer.writerow([tid_kort, p.get('CO2Emission')])
-                        count += 1
-                
-                if count >= 16:
-                    break
+                        
+                        # Stop hvis vi har skrevet kl. 23:00
+                        if timer_str == "23":
+                            break
 
-        print("forbrugco2.csv opdateret. Første forecast er næste hele time.")
     except Exception as e:
         print(f"En fejl opstod: {e}")
 

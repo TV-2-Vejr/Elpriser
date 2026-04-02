@@ -39,17 +39,17 @@ def run():
         with open('forbrugco2.csv', 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             
-            # Sektion 1: Aktuelle tal (alle tal konverteres til int)
+            # Sektion 1: Aktuelle tal (CO2 med subscript 2)
             writer.writerow(["type", "value"])
-            writer.writerow(["CO2", f"{int(r.get('CO2Emission', 0))} g CO2/kWh"])
+            writer.writerow(["CO2", f"{int(r.get('CO2Emission', 0))} g CO₂/kWh"])
             writer.writerow(["Sol", f"{int(sol)} MW"])
             writer.writerow(["Vind", f"{int(vind)} MW"])
             writer.writerow(["Forbrug", f"{int(forbrug)} MW"])
             writer.writerow(["Grøn", f"{int(groen_procent)} %"])
             writer.writerow(["Tid", tid_nu_str])
             
-            # Sektion 2: Prognose per time (fra næste hele time til kl. 23)
-            writer.writerow(["time", "forecast CO2"])
+            # Sektion 2: Prognose per time (Overskrift med subscript 2)
+            writer.writerow(["time", "forecast CO₂"])
             
             # Sorter kronologisk
             sorted_all = sorted(prog_records, key=lambda x: (x.get('Minutes5DK') or x.get('Minutes1DK', '')))
@@ -57,19 +57,15 @@ def run():
             for p in sorted_all:
                 tid_raw = p.get('Minutes5DK') or p.get('Minutes1DK')
                 
-                # Tjek om tidspunktet er efter 'nu'
                 if tid_raw and tid_raw > tid_nu_str:
                     timer_str = tid_raw[11:13] # HH
                     minutter_str = tid_raw[14:16] # MM
                     
-                    # Tag kun hele timer (:00)
                     if minutter_str == "00":
                         tid_kort = tid_raw[11:16]
-                        # CO2 forecast som heltal
                         forecast_val = int(p.get('CO2Emission', 0))
                         writer.writerow([tid_kort, forecast_val])
                         
-                        # Stop hvis vi har skrevet kl. 23:00
                         if timer_str == "23":
                             break
 

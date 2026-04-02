@@ -16,8 +16,7 @@ def run():
         r = res_now['records'][0]
         tid_nu_str = r.get('Minutes1DK') or r.get('Minutes5DK')
 
-        # --- BEREGNINGER SOM BESKREVET ---
-        # Vi tager alle de specifikke felter og lægger dem sammen
+        # --- BEREGNINGER ---
         ge100 = r.get('ProductionGe100MW', 0) or 0
         lt100 = r.get('ProductionLt100MW', 0) or 0
         sol = r.get('SolarPower', 0) or 0
@@ -25,16 +24,16 @@ def run():
         onshore = r.get('OnshoreWindPower', 0) or 0
         exchange = r.get('ExchangeSum', 0) or 0
         
-        # Forbrug = Summen af alle kilder + udveksling
+        # Forbrug = Summen af alle kilder + udveksling (ExchangeSum er positiv ved import)
         forbrug = ge100 + lt100 + sol + offshore + onshore + exchange
         
-        # Vind samlet til visning
+        # Vind samlet
         vind_total = offshore + onshore
         
-        # Grøn procent som heltal
+        # Grøn procent (Vind + Sol som % af forbrug)
         groen_procent = 0
         if forbrug > 0:
-            groen_procent = min(100, int(round(((vind_total + sol) / forbrug) * 100)))
+            groen_procent = int(round(((vind_total + sol) / forbrug) * 100))
 
         # 2. Hent CO2 prognose (CO2EmisProg)
         url_prog = "https://api.energidataservice.dk/dataset/CO2EmisProg?limit=500&filter=%7B%22PriceArea%22%3A%5B%22DK1%22%5D%7D"
@@ -45,7 +44,7 @@ def run():
         with open('forbrugco2.csv', 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             
-            # Sektion 1: Aktuelle tal (Heltal og subscript)
+            # Sektion 1: Aktuelle tal
             writer.writerow(["type", "value"])
             writer.writerow(["CO2", f"{int(r.get('CO2Emission', 0))} g CO₂/kWh"])
             writer.writerow(["Sol", f"{int(sol)} MW"])
@@ -63,9 +62,9 @@ def run():
             for p in sorted_all:
                 t_raw = p.get('Minutes5DK') or p.get('Minutes1DK')
                 if t_raw and t_raw > tid_nu_str:
-                    if t_raw[14:16] == "00": # Kun hele timer
+                    if t_raw[14:16] == "00":
                         writer.writerow([t_raw[11:16], int(p.get('CO2Emission', 0))])
-                        if t_raw[11:13] == "23": # Stop ved kl. 23
+                        if t_raw[11:13] == "23":
                             break
 
     except Exception as e:

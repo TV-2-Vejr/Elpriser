@@ -20,7 +20,6 @@ def run():
         sol = (r.get('SolarPower', 0) or 0)
         
         # Beregn Forbrug (Produktion - Udveksling)
-        # Vi prøver ExchangeSum, ellers summerer vi alle felter der indeholder 'Exchange'
         exchange = r.get('ExchangeSum')
         if exchange is None:
             exchange_fields = [k for k in r.keys() if 'Exchange' in k]
@@ -38,8 +37,8 @@ def run():
             groen_procent = min(100, round(((vind + sol) / forbrug) * 100))
 
         # 2. Hent CO2 prognose (CO2EmisProg)
-        # Dette datasæt bruger typisk 'Minutes5DK' i stedet for 'Minutes1DK'
-        url_prog = "https://api.energidataservice.dk/dataset/CO2EmisProg?limit=10&filter=%7B%22PriceArea%22%3A%5B%22DK1%22%5D%7D"
+        # Vi henter flere records (f.eks. 150) for at være sikre på at få nok hele timer frem i tiden
+        url_prog = "https://api.energidataservice.dk/dataset/CO2EmisProg?limit=150&filter=%7B%22PriceArea%22%3A%5B%22DK1%22%5D%7D"
         res_prog = requests.get(url_prog).json()
         prog_records = res_prog.get('records', [])
 
@@ -55,21 +54,31 @@ def run():
             writer.writerow(["Forbrug", f"{int(forbrug)} MW"])
             writer.writerow(["Grøn", f"{groen_procent} %"])
             
-            # Find tidsfeltet i 'PowerSystemRightNow' (kan variere en smule)
             tid_nu = r.get('Minutes1DK') or r.get('Minutes5DK') or "Ukendt tid"
             writer.writerow(["Tid", tid_nu])
             
-            # Sektion 2: Prognose
+            # Sektion 2: Prognose per time
             writer.writerow(["time", "forecast CO2"])
             
-            for p in prog_records:
-                # Dynamisk tjek for tidsfeltet i prognosen (Minutes5DK eller Minutes1DK)
+            count = 0
+            # Sorter så vi går kronologisk frem
+            sorted_prog = sorted(prog_records, key=lambda x: (x.get('Minutes5DK') or x.get('Minutes1DK', '')))
+            
+            for p in sorted_prog:
                 tid_raw = p.get('Minutes5DK') or p.get('Minutes1DK')
                 if tid_raw:
-                    tid_kort = tid_raw[11:16] # Udtager "HH:MM"
-                    writer.writerow([tid_kort, p.get('CO2Emission')])
+                    minutter = tid_raw[14:16]
+                    # Vi tager kun de rækker hvor minutterne er 00 (hel time)
+                    if minutter == "00":
+                        tid_kort = tid_raw[11:16]
+                        writer.writerow([tid_kort, p.get('CO2Emission')])
+                        count += 1
+                
+                # Stop når vi har 10 timer (eller det antal du ønsker)
+                if count >= 10:
+                    break
 
-        print("✔ forbrugco2.csv opdateret succesfuldt.")
+        print("forbrugco2.csv opdateret med time-forecast.")
     except Exception as e:
         print(f"En fejl opstod: {e}")
 

@@ -67,7 +67,7 @@ def run():
                         writer.writerow([tid_kort, p.get('CO2Emission')])
                         count += 1
                 
-                if count >= 10:
+                if count >= 16:
                     break
 
         print("forbrugco2.csv opdateret. Første forecast er næste hele time.")

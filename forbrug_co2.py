@@ -15,8 +15,8 @@ def run():
     sol = (r['SolarPower'] or 0)
     # Produktion (Total) = Vind + Sol + Store værker + Små værker
     produktion = vind + sol + (r['ProductionGe100MW'] or 0) + (r['ProductionLt100MW'] or 0)
-    # Forbrug = Produktion - ExchangeSum (ExchangeSum er positiv ved eksport, negativ ved import)
-    forbrug = produktion - (r['ExchangeSum'] or 0)
+    # Forbrug = Produktion - Exchange_Sum (Exchange_Sum er positiv ved eksport, negativ ved import)
+    forbrug = produktion - (r['Exchange_Sum'] or 0)
     
     # Grøn andel (Vind + Sol) / Forbrug
     # Vi sikrer os mod division med nul og sætter max til 100%

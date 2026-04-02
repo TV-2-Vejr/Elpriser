@@ -22,9 +22,9 @@ def run():
         sol = r.get('SolarPower', 0) or 0
         offshore = r.get('OffshoreWindPower', 0) or 0
         onshore = r.get('OnshoreWindPower', 0) or 0
-        exchange = r.get('ExchangeSum', 0) or 0
+        exchange = r.get('Exchange_Sum', 0) or 0
         
-        # Forbrug = Summen af alle kilder + udveksling (ExchangeSum er positiv ved import)
+        # Forbrug = Summen af alle kilder + udveksling (Exchange_Sum er positiv ved import)
         forbrug = ge100 + lt100 + sol + offshore + onshore + exchange
         
         # Vind samlet

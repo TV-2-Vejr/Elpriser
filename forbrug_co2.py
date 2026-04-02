@@ -5,40 +5,37 @@ from datetime import datetime
 
 def run():
     try:
-        # 1. Hent aktuelle data (PowerSystemRightNow)
+        # 1. Hent aktuelle data
         url_now = "https://api.energidataservice.dk/dataset/PowerSystemRightNow?limit=1"
         res_now = requests.get(url_now).json()
         
         if not res_now.get('records'):
-            print("Ingen records fundet i PowerSystemRightNow")
+            print("Ingen records fundet")
             return
             
         r = res_now['records'][0]
         tid_nu_str = r.get('Minutes1DK') or r.get('Minutes5DK')
 
-        # --- PRÆCIS BEREGNING AF FORBRUG ---
-        # Vi tager alle produktionskilder
+        # --- BEREGNINGER ---
+        # Produktion
         vind = (r.get('OffshoreWindPower', 0) or 0) + (r.get('OnshoreWindPower', 0) or 0)
         sol = (r.get('SolarPower', 0) or 0)
-        produktion_dk = (r.get('ProductionGe100MW', 0) or 0) + \
-                        (r.get('ProductionLt100MW', 0) or 0) + \
-                        vind + sol
+        produktion_total = (r.get('ProductionGe100MW', 0) or 0) + \
+                           (r.get('ProductionLt100MW', 0) or 0) + \
+                           vind + sol
         
-        # Udveksling: Positiv værdi er eksport (strøm ud af DK), negativ er import (strøm ind i DK)
-        # Forbrug = Produktion - Udveksling
-        # Eksempel: Hvis vi producerer 4000 MW og importerer 1000 MW (Exchange = -1000), 
-        # så er forbruget: 4000 - (-1000) = 5000 MW.
+        # Udveksling (Negativ = Import, Positiv = Eksport)
         exchange = r.get('ExchangeSum')
         if exchange is None:
-            # Hvis ExchangeSum mangler, summerer vi alle Exchange-felter manuelt
             exchange = sum(v for k, v in r.items() if 'Exchange' in k and v is not None)
             
-        forbrug = produktion_dk - exchange
+        # Forbrug = Produktion minus udveksling (Minus og minus giver plus ved import)
+        forbrug = produktion_total - exchange
         
-        # Grøn procent (Vind + Sol som andel af det samlede forbrug)
+        # Grøn andel (Vind + Sol som % af forbrug)
         groen_procent = min(100, int(round(((vind + sol) / forbrug) * 100))) if forbrug > 0 else 0
 
-        # 2. Hent CO2 prognose (CO2EmisProg)
+        # 2. Hent CO2 prognose
         url_prog = "https://api.energidataservice.dk/dataset/CO2EmisProg?limit=500&filter=%7B%22PriceArea%22%3A%5B%22DK1%22%5D%7D"
         res_prog = requests.get(url_prog).json()
         prog_records = res_prog.get('records', [])
@@ -47,6 +44,7 @@ def run():
         with open('forbrugco2.csv', 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             
+            # Sektion 1: Aktuelle tal
             writer.writerow(["type", "value"])
             writer.writerow(["CO2", f"{int(r.get('CO2Emission', 0))} g CO₂/kWh"])
             writer.writerow(["Sol", f"{int(sol)} MW"])
@@ -55,6 +53,7 @@ def run():
             writer.writerow(["Grøn", f"{int(groen_procent)} %"])
             writer.writerow(["Tid", tid_nu_str])
             
+            # Sektion 2: Prognose
             writer.writerow(["time", "forecast CO₂"])
             
             sorted_all = sorted(prog_records, key=lambda x: (x.get('Minutes5DK') or x.get('Minutes1DK', '')))

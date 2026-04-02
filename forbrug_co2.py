@@ -23,12 +23,14 @@ def run():
         if exchange is None:
             exchange_fields = [k for k in r.keys() if 'Exchange' in k]
             exchange = sum(r.get(f, 0) or 0 for f in exchange_fields)
+        
         produktion_total = (r.get('ProductionGe100MW', 0) or 0) + (r.get('ProductionLt100MW', 0) or 0) + vind + sol
         forbrug = produktion_total - exchange
-        groen_procent = min(100, round(((vind + sol) / forbrug) * 100)) if forbrug > 0 else 0
+        
+        # Grøn procent som heltal
+        groen_procent = min(100, int(round(((vind + sol) / forbrug) * 100))) if forbrug > 0 else 0
 
         # 2. Hent CO2 prognose (CO2EmisProg)
-        # Vi henter op til 500 records for at være sikre på at dække hele døgnet
         url_prog = "https://api.energidataservice.dk/dataset/CO2EmisProg?limit=500&filter=%7B%22PriceArea%22%3A%5B%22DK1%22%5D%7D"
         res_prog = requests.get(url_prog).json()
         prog_records = res_prog.get('records', [])
@@ -37,13 +39,13 @@ def run():
         with open('forbrugco2.csv', 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             
-            # Sektion 1: Aktuelle tal
+            # Sektion 1: Aktuelle tal (alle tal konverteres til int)
             writer.writerow(["type", "value"])
-            writer.writerow(["CO2", f"{r.get('CO2Emission', 0)} g CO2/kWh"])
+            writer.writerow(["CO2", f"{int(r.get('CO2Emission', 0))} g CO2/kWh"])
             writer.writerow(["Sol", f"{int(sol)} MW"])
             writer.writerow(["Vind", f"{int(vind)} MW"])
             writer.writerow(["Forbrug", f"{int(forbrug)} MW"])
-            writer.writerow(["Grøn", f"{groen_procent} %"])
+            writer.writerow(["Grøn", f"{int(groen_procent)} %"])
             writer.writerow(["Tid", tid_nu_str])
             
             # Sektion 2: Prognose per time (fra næste hele time til kl. 23)
@@ -63,7 +65,9 @@ def run():
                     # Tag kun hele timer (:00)
                     if minutter_str == "00":
                         tid_kort = tid_raw[11:16]
-                        writer.writerow([tid_kort, p.get('CO2Emission')])
+                        # CO2 forecast som heltal
+                        forecast_val = int(p.get('CO2Emission', 0))
+                        writer.writerow([tid_kort, forecast_val])
                         
                         # Stop hvis vi har skrevet kl. 23:00
                         if timer_str == "23":

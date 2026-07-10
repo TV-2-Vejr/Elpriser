@@ -1,14 +1,13 @@
 type,value
 CO2,95 g CO₂/kWh
-Sol,2256 MW
-Vind,285 MW
-Forbrug,4223 MW
-Grøn,60 %
-Tid,2026-07-10T17:54:00
+Sol,2194 MW
+Vind,287 MW
+Forbrug,4222 MW
+Grøn,59 %
+Tid,2026-07-10T18:00:00
 time,forecast CO₂
-18:00,117
 19:00,113
 20:00,134
 21:00,145
-22:00,120
+22:00,121
 23:00,87
